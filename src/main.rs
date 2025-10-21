@@ -61,8 +61,8 @@ fn init() -> Result<(sdl2::Sdl, sdl2::render::Canvas<sdl2::video::Window>, AppSt
         model,
         center,
         scale_factor,
-        angle_x: 0.0,
-        angle_y: 0.0,
+        angle_x: std::f32::consts::PI / 2.0, // Rotación inicial en X (90 grados)
+        angle_y: std::f32::consts::PI,
         offset_x: 0.0,
         offset_y: 0.0,
     };
@@ -165,22 +165,20 @@ fn render(app_state: &mut AppState) {
         let base_g = ((normal.y.abs() * 0.5 + 0.5) * current_color.g as f32) as u8;
         let base_b = ((normal.z.abs() * 0.5 + 0.5) * current_color.b as f32) as u8;
         
-        let color_variant = i % 5;
+        let color_variant = i % 4;
         let face_color = match color_variant {
-            0 => Color::new((base_r as f32 * intensity) as u8, 
-                           (base_g as f32 * intensity) as u8, 
-                           (base_b as f32 * intensity) as u8),
-            1 => Color::new((base_g as f32 * intensity) as u8, 
-                           (base_r as f32 * intensity) as u8, 
-                           (base_b as f32 * intensity) as u8),
-            2 => Color::new((base_b as f32 * intensity) as u8, 
-                           (base_g as f32 * intensity) as u8, 
-                           (base_r as f32 * intensity) as u8),
-            3 => Color::new(30, 30, (200.0 * intensity) as u8),
-            _ => Color::new((220.0 * intensity) as u8, 
-                           (220.0 * intensity) as u8, 
-                           (50.0 * intensity) as u8)
+            0 => Color::new(180, 180, 180),  // Gris claro
+            1 => Color::new(140, 140, 140),  // Gris medio
+            2 => Color::new(120, 120, 130),  // Gris azulado
+            _ => Color::new(160, 150, 140),  // Beige grisáceo
         };
+
+        // Aplicar iluminación
+        let shaded_color = Color::new(
+            ((face_color.r as f32 * intensity) as u8),
+            ((face_color.g as f32 * intensity) as u8),
+            ((face_color.b as f32 * intensity) as u8)
+        );
         
         // Solo dibujar si la normal apunta hacia la cámara
         if normal.z > 0.0 {
@@ -199,6 +197,10 @@ fn handle_keys(app_state: &mut AppState, keycode: Keycode) {
         Keycode::S => app_state.offset_y += 10.0,
         Keycode::A => app_state.offset_x -= 10.0,
         Keycode::D => app_state.offset_x += 10.0,
+        Keycode::F => {
+            // Girar 180 grados en Y (invertir dirección)
+            app_state.angle_y += std::f32::consts::PI;
+        },
         Keycode::R => {
             // Resetear rotación y posición
             app_state.angle_x = 0.0;
