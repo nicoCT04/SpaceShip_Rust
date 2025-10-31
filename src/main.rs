@@ -99,11 +99,11 @@ fn render(app_state: &mut AppState) {
     // Crear una lista de caras para ordenamiento
     let mut faces_to_render = Vec::new();
     
-    // Colores definidos para cada parte de la nave
-    let color_cuerpo = Color::new(250, 250, 250);      // Blanco (cuerpo principal)
-    let color_propulsores = Color::new(100, 100, 100); // Gris (propulsores)
-    let color_compartimentos = Color::new(255, 120, 50); // Naranja (compartimentos laterales)
-    let color_cabina = Color::new(30, 30, 30);         // Negro (cabina)
+    // Paleta de colores armoniosa (tonos grises y azules que combinan entre sí)
+    let color_cuerpo = Color::new(200, 210, 220);       // Gris azulado claro
+    let color_propulsores = Color::new(120, 140, 160);  // Gris azulado medio
+    let color_compartimentos = Color::new(80, 100, 130); // Gris azulado oscuro
+    let color_cabina = Color::new(150, 170, 200);       // Azul grisáceo
     
     // Procesar todas las caras
     for (i, face) in model.faces.iter().enumerate() {
@@ -111,26 +111,46 @@ fn render(app_state: &mut AppState) {
         let v0 = &model.vertices[face[0]];
         let v1 = &model.vertices[face[1]];
         let v2 = &model.vertices[face[2]];
-        
-        // Aplicar rotación en X
+
+        // Rotación FIJA para determinar colores (no cambia con WASD)
+        let fixed_angle_x = std::f32::consts::PI / 2.0; // 90 grados
+        let fixed_angle_y = std::f32::consts::PI;       // 180 grados
+
+        let rotate_fixed_x = |v: &Vec3| -> Vec3 {
+            let y = v.y * fixed_angle_x.cos() - v.z * fixed_angle_x.sin();
+            let z = v.y * fixed_angle_x.sin() + v.z * fixed_angle_x.cos();
+            Vec3::new(v.x, y, z)
+        };
+
+        let rotate_fixed_y = |v: &Vec3| -> Vec3 {
+            let x = v.x * fixed_angle_y.cos() + v.z * fixed_angle_y.sin();
+            let z = -v.x * fixed_angle_y.sin() + v.z * fixed_angle_y.cos();
+            Vec3::new(x, v.y, z)
+        };
+
+        // Aplicar rotación DINÁMICA para visualización (con angle_x, angle_y del usuario)
         let rotate_x = |v: &Vec3| -> Vec3 {
             let y = v.y * angle_x.cos() - v.z * angle_x.sin();
             let z = v.y * angle_x.sin() + v.z * angle_x.cos();
             Vec3::new(v.x, y, z)
         };
-        
-        // Aplicar rotación en Y
+
         let rotate_y = |v: &Vec3| -> Vec3 {
             let x = v.x * angle_y.cos() + v.z * angle_y.sin();
             let z = -v.x * angle_y.sin() + v.z * angle_y.cos();
             Vec3::new(x, v.y, z)
         };
-        
-        // Rotar los vértices para visualización
+
+        // Rotar con rotación FIJA para calcular colores (no cambia)
+        let fv0 = rotate_fixed_y(&rotate_fixed_x(v0));
+        let fv1 = rotate_fixed_y(&rotate_fixed_x(v1));
+        let fv2 = rotate_fixed_y(&rotate_fixed_x(v2));
+
+        // Rotar con rotación DINÁMICA para visualización (cambia con WASD)
         let rv0 = rotate_y(&rotate_x(v0));
         let rv1 = rotate_y(&rotate_x(v1));
         let rv2 = rotate_y(&rotate_x(v2));
-        
+
         // Calcular la normal de la cara para determinar visibilidad
         let edge1 = Vec3::new(rv1.x - rv0.x, rv1.y - rv0.y, rv1.z - rv0.z);
         let edge2 = Vec3::new(rv2.x - rv0.x, rv2.y - rv0.y, rv2.z - rv0.z);
@@ -139,30 +159,31 @@ fn render(app_state: &mut AppState) {
             edge1.z * edge2.x - edge1.x * edge2.z,
             edge1.x * edge2.y - edge1.y * edge2.x
         );
-        
+
         // Solo procesar caras que miran hacia la cámara (backface culling)
         if normal.z <= 0.0 {
             continue;
         }
-        
-        // Calcular promedios para determinar la región de la nave
-        let orig_avg_x = (v0.x + v1.x + v2.x) / 3.0;
-        let orig_avg_y = (v0.y + v1.y + v2.y) / 3.0;
-        let orig_avg_z = (v0.z + v1.z + v2.z) / 3.0;
 
-        // Asignar colores basados en la posición original
+        // Calcular promedios usando las coordenadas con rotación FIJA
+        // Esto asegura que los colores NO cambien cuando mueves la nave
+        let fixed_avg_x = (fv0.x + fv1.x + fv2.x) / 3.0;
+        let fixed_avg_y = (fv0.y + fv1.y + fv2.y) / 3.0;
+        let fixed_avg_z = (fv0.z + fv1.z + fv2.z) / 3.0;
+
+        // Asignar colores basados en la posición con rotación fija
         let final_color =
-            // Cabina (parte superior central, Y alto y Z frontal)
-            if orig_avg_y > 0.25 && abs(orig_avg_x) < 0.25 && orig_avg_z > 0.4 {
+            // Cabina (parte superior central, Y alto y centro en X)
+            if fixed_avg_y > 0.35 && abs(fixed_avg_x) < 0.25 {
                 color_cabina
             }
-            // Propulsores (parte trasera, Z muy negativo)
-            else if orig_avg_z < -0.8 {
-                color_propulsores
-            }
-            // Compartimentos laterales / cápsulas (a los lados, X extremos)
-            else if abs(orig_avg_x) > 0.7 {
+            // Compartimentos laterales (lados extremos, más restrictivo)
+            else if abs(fixed_avg_x) > 0.7 && fixed_avg_y > -0.1 {
                 color_compartimentos
+            }
+            // Propulsores (parte trasera inferior, Z negativo y Y bajo)
+            else if fixed_avg_z < -0.7 || (fixed_avg_y < -0.2 && abs(fixed_avg_x) < 0.6) {
+                color_propulsores
             }
             // Cuerpo principal (todo lo demás)
             else {
