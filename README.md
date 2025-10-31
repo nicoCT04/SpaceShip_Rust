@@ -14,7 +14,7 @@ The renderer loads a 3D model (.obj file) of a spaceship and displays it on scre
 
 ## Result
 
-![Rendered Spaceship](space_ship.png)
+![Rendered Spaceship](space_ship1.png)
 
 ## Features
 
