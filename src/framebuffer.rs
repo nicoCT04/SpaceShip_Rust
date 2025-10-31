@@ -5,6 +5,7 @@ pub const SCREEN_HEIGHT: usize = 600;
 
 pub struct Framebuffer {
    pub buffer: Vec<Color>,
+   pub z_buffer: Vec<f32>,
    pub width: usize,
    pub height: usize,
 }
@@ -12,8 +13,10 @@ pub struct Framebuffer {
 impl Framebuffer {
    pub fn new() -> Self {
       let buffer = vec![Color::new(0, 0, 0); SCREEN_WIDTH * SCREEN_HEIGHT];
+      let z_buffer = vec![f32::INFINITY; SCREEN_WIDTH * SCREEN_HEIGHT];
       Framebuffer {
          buffer,
+         z_buffer,
          width: SCREEN_WIDTH,
          height: SCREEN_HEIGHT,
       }
@@ -22,6 +25,10 @@ impl Framebuffer {
    pub fn clear(&mut self, color: Color) {
       for pixel in &mut self.buffer {
          *pixel = color;
+      }
+
+      for z in &mut self.z_buffer {
+      *z = f32::MAX;
       }
    }
 
